@@ -1,6 +1,6 @@
 install-norm-codegen:
 	mkdir -p ".gradle"
-	curl -L https://github.com/medly/norm/releases/download/v0.0.7/norm-codegen.zip --output ./.gradle/norm-codegen.zip
+	curl -L https://github.com/medly/norm/releases/download/v0.0.5/norm-codegen.zip --output ./.gradle/norm-codegen.zip
 	unzip -o ./.gradle/norm-codegen.zip -d ./.gradle && rm ./.gradle/norm-codegen.zip
 	chmod +x .gradle/norm-codegen/bin/norm-codegen
 

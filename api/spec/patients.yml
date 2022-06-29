@@ -10,4 +10,8 @@ paths:
           content:
             application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/Object'
+components:
+  schemas:
+    Object:
+      type: object
