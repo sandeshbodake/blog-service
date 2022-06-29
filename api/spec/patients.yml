@@ -1,0 +1,13 @@
+openapi: 3.0.1
+paths:
+  /api/v1/blogs:
+    get:
+      operationId: getAll
+      parameters: []
+      responses:
+        default:
+          description: getAll default response
+          content:
+            application/json:
+              schema:
+                type: string

@@ -1,0 +1,15 @@
+micronaut:
+  server:
+    port: 9000
+  application:
+    name: blog-service
+  endpoints:
+    routes:
+      enabled: Boolean
+      sensitive: Boolean
+  ## enable watch and stop server when files changes.
+  io:
+    watch:
+      enabled: true
+      paths: src/,res/,../connector/db/src,../core/src
+      restart: true

@@ -1,0 +1,46 @@
+name: Test, build and upload artifact to S3
+
+on: [ push, pull_request ]
+
+jobs:
+  build-test-and-upload-artifact:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Build with Gradle
+      run: ./gradlew test build
+    - name: Run Ktlint Check
+      run: ./gradlew ktlintCheck
+    - name: Copy migrations zip and rename it to bundle.zip
+      run: mv -f ./migration/build/distributions/sample-service-db-migrate.zip bundle.zip
+    - name: Build deployable Bundle containing the serverless file and the jar
+      run: zip -uj bundle.zip ./application/build/libs/sample-service-0.1-all.jar ./infra/serverless.yml ./infra/Makefile ./infra/applymigrations.sh
+#    - name: Upload artifacts to the common S3 bucket for build artitacts of all apps
+#      uses: medlypharmacy/s3-artifacts-action@master
+#      with:
+#        aws_access_key_id: ${{ secrets.S3_BUILD_ARTIFACTS_ACCESS_KEY_ID }}
+#        aws_secret_access_key: ${{ secrets.S3_BUILD_ARTIFACTS_SECRET_ACCESS_KEY }}
+#        aws_region: us-east-1
+#        source_path: './bundle.zip'
+#        aws_s3_bucket_name: ${{ secrets.S3_BUILD_ARTIFACTS_BUCKET_NAME }}
+       
+#    - name: Deploy to Dev Environment
+#      uses: medlypharmacy/codepipeline-webhook-action@master
+#      if: github.ref == 'refs/heads/master'
+#      with:
+#        deployment_environment: 'dev'
+#        codepipeline_webhook_url: ${{ secrets.CODEPIPELINE_WEBHOOK_URL }}
+#        codepipeline_webhook_secret: ${{ secrets.CODEPIPELINE_WEBHOOK_SECRET }}
+        
+#    - name: Run Detekt
+#      run: ./gradlew detekt
+#    - name: Sonar Scan
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      run: ./gradlew sonarqube -Dsonar.login=${{ secrets.SONAR_TOKEN }} -s

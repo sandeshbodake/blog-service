@@ -1,0 +1,28 @@
+sourceSets.main.kotlin.srcDirs += "gen"
+sourceSets.main.resources.srcDirs += "sql"
+
+configurations {
+    norm
+}
+
+dependencies {
+    implementation project(":core")
+    api 'com.github.medly.norm:runtime:0.0.5'
+    api 'org.postgresql:postgresql:42.2.8'
+    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    implementation "io.micronaut:micronaut-inject"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.10.2"
+    implementation "com.amazonaws:aws-java-sdk-secretsmanager:1.11.355"
+    kapt platform("io.micronaut:micronaut-bom:$micronautVersion")
+    kapt "io.micronaut:micronaut-inject-java"
+    kapt "io.micronaut:micronaut-inject-java"
+    kapt "io.micronaut:micronaut-validation"
+    kaptTest platform("io.micronaut:micronaut-bom:$micronautVersion")
+    kaptTest "io.micronaut:micronaut-inject-java"
+    norm "org.postgresql:postgresql:$postgresVersion"
+    norm 'com.github.medly.norm:codegen:0.0.5'
+    norm 'com.github.medly.norm:runtime:0.0.5'
+    testImplementation 'org.testcontainers:postgresql:1.15.1'
+    testImplementation 'postgresql:postgresql:9.1-901-1.jdbc4'
+    testImplementation "org.liquibase:liquibase-core:$liquibaseVersion"
+}

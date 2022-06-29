@@ -1,0 +1,70 @@
+plugins {
+    id 'application'
+    id 'com.github.johnrengelman.shadow'
+}
+
+group 'sample.service'
+version '0.1'
+
+repositories {
+    mavenCentral()
+}
+
+mainClassName = "blogs.ApiApplication"
+
+jar {
+    setArchivesBaseName("sample-service")
+}
+
+configurations {
+    devOnly
+}
+
+sourceSets {
+    devOnly {
+        kotlin.srcDirs = ['dev-src']
+        resources.srcDirs = ['dev-res']
+        java.srcDirs = [] // disable java devOnly dirs
+        compileClasspath += sourceSets.main.runtimeClasspath
+    }
+}
+
+dependencies {
+    devOnly platform("io.micronaut:micronaut-bom:$micronautVersion")
+    devOnly "io.micronaut:micronaut-http-server-netty"
+
+    implementation project(':api')
+    implementation project(':event')
+
+    implementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+    implementation 'io.micronaut:micronaut-security-jwt'
+
+    kapt platform("io.micronaut:micronaut-bom:$micronautVersion")
+    kapt 'io.micronaut:micronaut-security'
+    kapt "io.micronaut:micronaut-inject-java"
+    kaptDevOnly "io.micronaut:micronaut-inject-java"
+}
+
+shadowJar {
+    mergeServiceFiles()
+}
+
+task buildZip(type: Zip) {
+    from sourceSets.main.output
+    into('lib') {
+        from configurations.compileClasspath
+        from configurations.runtimeClasspath
+    }
+}
+
+task runApi(type: JavaExec) {
+    main = "blogs.ApiApplication"
+    classpath = sourceSets.main.runtimeClasspath
+    classpath += configurations.devOnly                         // Adds devOnly libraries
+    classpath += sourceSets.devOnly.runtimeClasspath            // Adds devOnly sources and resources
+    jvmArgs('-noverify',
+            '-XX:TieredStopAtLevel=1',
+            '-Dcom.sun.management.jmxremote',
+            "-Dlogback.configurationFile=logback-dev.xml",
+            '-Dmicronaut.environments=dev')
+}

@@ -1,0 +1,5 @@
+micronaut:
+  application:
+    name: sample-service
+  function:
+    name: sample-service

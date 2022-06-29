@@ -1,0 +1,97 @@
+service: sampleService
+
+custom:
+  host:
+    ${opt:host, 'local'}
+  profile:
+    ci:
+    local: medly-${opt:stage}
+  alerts:
+    stages:
+      - medly-${opt:stage}
+    topics:
+      alarm:
+        topic: ${self:service}-${opt:stage}-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: your-team@medlypharmacy.com
+    definitions:
+      threshold: 10
+      period: 600
+      comparisonOperator: GreaterThanOrEqualToThreshold
+    alarms:
+      - functionErrors
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'sandbox'}
+  profile: ${self:custom.profile.${self:custom.host}}
+  runtime: java11
+  memorySize: 2048
+  tracing:
+    apiGateway: true
+    lambda: true
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - kinesis:CreateStream
+        - kinesis:DeleteStream
+        - kinesis:DescribeStream
+        - kinesis:ListStreams
+        - kinesis:PutRecord
+        - kinesis:PutRecords
+      Resource: ${ssm:/${opt:stage}/patientStreamARN}
+    - Effect: "Allow"
+      Action:
+        - ec2:CreateNetworkInterface
+        - ec2:DescribeNetworkInterfaces
+        - ec2:DeleteNetworkInterface
+        - secretsmanager:GetSecretValue
+        - xray:PutTraceSegments
+        - xray:PutTelemetryRecords
+      Resource: "*"
+
+  apiGateway:
+    restApiId: ${ssm:/${opt:stage}/sampleServiceRestApiId}
+    restApiRootResourceId: ${ssm:/${opt:stage}/sampleServiceApiRootResourceId}
+    description: API Gateway for Sample Service
+
+resources:
+  Resources:
+    LambdaSecurityGroup:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+        GroupName: ${self:service}-${self:provider.stage}-lambda
+        GroupDescription: Allow all outbound traffic, no inbound
+        SecurityGroupIngress:
+          - IpProtocol: -1
+            CidrIp: 127.0.0.1/32
+        VpcId: ${ssm:/${opt:stage}/sampleServiceVpcId}
+
+package:
+  artifact: sample-service-0.1-all.jar
+
+functions:
+  sampleServiceApi:
+    vpc:
+      securityGroupIds:
+        - Ref: LambdaSecurityGroup
+      subnetIds: ${ssm:/${opt:stage}/sampleServicePrivateSubnets~split}
+    handler: ps.api.StreamLambdaHandler::handleRequest
+    description: Lambda function for the Sample Service API
+    timeout: 20
+    provisionedConcurrency: ${ssm:/${opt:stage}/sampleServiceProvisionedConcurrency}
+    environment:
+      OKTA_AUTH_URL: ${ssm:/${opt:stage}/oktaAuthUrl}
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+      - stream:
+          arn: ${ssm:/${opt:stage}/mmsPatientStreamARN}
+          batchSize: 100
+          maximumRetryAttempts: 3
+          startingPosition: LATEST
+          enabled: true
+plugins:
+  - serverless-plugin-aws-alerts

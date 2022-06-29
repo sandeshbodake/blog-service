@@ -1,0 +1,166 @@
+plugins {
+    id "com.kdabir.mksrc" version "1.1.0"
+    id "com.github.johnrengelman.shadow" version "6.0.0"
+    id "org.jetbrains.kotlin.jvm" version "1.3.72"
+    id "org.jetbrains.kotlin.kapt" version "1.3.72"
+    id "jp.classmethod.aws.lambda" version "0.39"
+    id "org.jetbrains.kotlin.plugin.allopen" version "1.3.72"
+    id "jacoco"
+    id "org.sonarqube" version "2.8"
+    id "io.gitlab.arturbosch.detekt" version "1.9.1"
+    id "org.jlleitschuh.gradle.ktlint" version "9.2.1"
+}
+
+repositories {
+    mavenCentral()
+    jcenter {
+        content {
+            includeGroup "org.jetbrains.kotlinx"
+        }
+    }
+    maven {
+        url 'https://jitpack.io'
+    }
+}
+
+sonarqube {
+    properties {
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.organization", "medly"
+        property "sonar.projectKey", "sample-service"
+        property "sonar.verbose", true
+        property "sonar.projectName", "sample-service"
+        property "sonar.exclusions", "**/gen/**, **/api/StreamLambdaHandler.kt"
+        // Remove the StreamLambdaHandler.kt. Only Added for Project Setup.
+        property "sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/build/reports/jacoco/codeCoverageReport/codeCoverageReport.xml"
+        property "sonar.kotlin.detekt.reportPaths", "${rootDir}/build/reports/detekt.xml"
+    }
+}
+
+detekt {
+    toolVersion = "1.9.0"
+    input = files("api/src", "connector/db/src", "event/src")
+    parallel = false
+    config = files("detekt.yml")
+    buildUponDefaultConfig = false
+    disableDefaultRuleSets = true
+    debug = true
+    ignoreFailures = false
+    reports {
+        xml {
+            enabled = true
+            destination = file("build/reports/detekt.xml")
+        }
+    }
+}
+
+dependencies {
+    detektPlugins "com.github.medly:detekt-extensions:5acfc16f80"
+}
+
+subprojects {
+    apply(plugin: 'com.kdabir.mksrc')
+    apply(plugin: 'org.jetbrains.kotlin.jvm')
+    apply(plugin: 'org.jetbrains.kotlin.kapt')
+    apply(plugin: 'jacoco')
+    apply(plugin: 'org.jlleitschuh.gradle.ktlint')
+
+    repositories {
+        jcenter()
+        mavenCentral()
+        maven {
+            url 'https://jitpack.io'
+            content {
+                includeGroup "com.github.medly.norm"
+                includeGroup "com.github.medly"
+            }
+        }
+    }
+
+    configurations {
+        devOnly
+    }
+
+    ktlint {
+        debug = true
+        filter {
+            exclude { element -> element.file.path.contains("/gen/") }
+        }
+    }
+
+    dependencies {
+        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}"
+        testImplementation platform("io.micronaut:micronaut-bom:$micronautVersion")
+        testImplementation "io.micronaut.test:micronaut-test-kotest:1.2.0"
+        testImplementation "io.mockk:mockk:1.9.3"
+        testImplementation("io.kotest:kotest-runner-junit5-jvm:4.1.1") {
+            force = true
+        }
+        testImplementation "io.kotest:kotest-assertions-core-jvm:4.1.1"
+        testImplementation "io.kotest:kotest-runner-console-jvm:4.1.1"
+    }
+
+    sourceSets {
+        main.kotlin.srcDirs = ['src']
+        test.kotlin.srcDirs = ['test']
+
+        main.resources.srcDirs = ['res']
+        test.resources.srcDirs = ['test-res']
+
+        main.java.srcDirs = [] // disable java source dirs
+        test.java.srcDirs = [] // disable java test dirs
+    }
+
+    test {
+        useJUnitPlatform()
+
+        testLogging {
+            events "PASSED", "FAILED", "SKIPPED"
+            exceptionFormat "full"
+        }
+    }
+
+    test.classpath += configurations.devOnly
+
+    allOpen {
+        annotation("io.micronaut.aop.Around")
+    }
+
+    compileKotlin {
+        kotlinOptions {
+            jvmTarget = '11'
+            //Will retain parameter names for Java reflection
+            javaParameters = true
+        }
+    }
+
+    compileTestKotlin {
+        kotlinOptions {
+            jvmTarget = '11'
+            javaParameters = true
+        }
+    }
+}
+
+task codeCoverageReport(type: JacocoReport) {
+    // Gather execution data from all subprojects
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+    // Add all relevant sourcesets from the subprojects
+    subprojects.each {
+        sourceSets it.sourceSets.main
+    }
+
+    reports {
+        xml.enabled true
+        html.enabled true
+        csv.enabled false
+    }
+}
+
+// always run the tests before generating the report
+codeCoverageReport.dependsOn {
+    subprojects*.test
+}
+
+test.finalizedBy(codeCoverageReport)

@@ -1,0 +1,22 @@
+rootProject.name = 'sample-service'
+
+include(':connector')
+project(':connector').setBuildFileName('connector.gradle')
+
+include(':connector:db')
+project(':connector:db').setBuildFileName('db.gradle')
+
+include(':api')
+project(':api').setBuildFileName('api.gradle')
+
+include(':application')
+project(':application').setBuildFileName('application.gradle')
+
+include(':migration')
+project(':migration').setBuildFileName('migration.gradle')
+
+include(':event')
+project(':event').setBuildFileName('event.gradle')
+
+include('core')
+project(':core').setBuildFileName('core.gradle')
