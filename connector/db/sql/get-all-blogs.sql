@@ -2,3 +2,4 @@ SELECT
     *
 FROM
     blogs;
+
